@@ -1,0 +1,37 @@
+from collections import defaultdict
+
+def group_matching_strings(strings):
+    """
+    Groups strings based on matching first and last words, ignoring the middle word.
+    Returns list of tuples containing matches.
+    
+    Args:
+        strings (list): List of strings in format 'word_word_word'
+        
+    Returns:
+        list: List of tuples containing matching string pairs
+    """
+    # Dictionary to store strings with same first and last words
+    groups = defaultdict(list)
+    
+    for s in strings:
+        # Split the string by underscore
+        parts = s.split('_')
+        if len(parts) == 3:
+            # Create key using first and last word
+            key = (parts[0], parts[2])
+            groups[key].append(s)
+    
+    # Create pairs from groups that have at least 2 elements
+    result = []
+    for strings in groups.values():
+        if len(strings) >= 2:
+            # Create pairs from the group
+            for i in range(0, len(strings) - 1, 2):
+                result.append((strings[i], strings[i + 1]))
+    
+    return result
+
+
+pairs = group_matching_strings(strings)
+print(pairs)
