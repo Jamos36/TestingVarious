@@ -1,3 +1,6 @@
+# left_hull, right_hull = find_minimum_bounding_line(your_dataframe, x_col='your_x_column', y_col='your_y_column')
+# visualize_result(your_dataframe, left_hull, right_hull, x_col='your_x_column', y_col='your_y_column')
+
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy.spatial import ConvexHull
