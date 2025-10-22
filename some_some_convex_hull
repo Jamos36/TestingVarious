@@ -1,0 +1,343 @@
+import numpy as np
+import matplotlib.pyplot as plt
+import pandas as pd
+
+def lower_bounding_line(x, y):
+    """
+    Find the lower bounding line using ONLY actual data points.
+    Returns indices of the data points that form the lower boundary.
+    
+    Parameters:
+    -----------
+    x : array-like
+        X coordinates of data points
+    y : array-like
+        Y coordinates of data points
+    
+    Returns:
+    --------
+    bound_indices : ndarray
+        Indices of original data points that form the bounding line
+    bound_x : ndarray
+        X coordinates of the bounding line (actual data points only)
+    bound_y : ndarray
+        Y coordinates of the bounding line (actual data points only)
+    """
+    x = np.asarray(x)
+    y = np.asarray(y)
+    
+    # Handle edge cases
+    if len(x) == 0:
+        return np.array([]), np.array([]), np.array([])
+    if len(x) == 1:
+        return np.array([0]), x, y
+    
+    # Create array of (x, y, original_index) to track which points we use
+    points_with_idx = [(x[i], y[i], i) for i in range(len(x))]
+    
+    # Sort by x coordinate, then by y (lowest first) for stable sorting
+    points_with_idx.sort(key=lambda p: (p[0], p[1]))
+    
+    if len(points_with_idx) <= 2:
+        indices = np.array([p[2] for p in points_with_idx])
+        bound_x = np.array([p[0] for p in points_with_idx])
+        bound_y = np.array([p[1] for p in points_with_idx])
+        return indices, bound_x, bound_y
+    
+    # Build lower hull using Andrew's monotone chain algorithm
+    lower = []
+    for p in points_with_idx:
+        # Remove points that would create a right turn (or straight line)
+        while len(lower) >= 2 and _cross_product(lower[-2], lower[-1], p) <= 0:
+            lower.pop()
+        lower.append(p)
+    
+    # Extract results
+    bound_indices = np.array([p[2] for p in lower])
+    bound_x = np.array([p[0] for p in lower])
+    bound_y = np.array([p[1] for p in lower])
+    
+    return bound_indices, bound_x, bound_y
+
+
+def _cross_product(o, a, b):
+    """
+    Calculate cross product of vectors OA and OB.
+    Returns positive if counter-clockwise turn, negative if clockwise.
+    Zero if collinear.
+    """
+    return (a[0] - o[0]) * (b[1] - o[1]) - (a[1] - o[1]) * (b[0] - o[0])
+
+
+def export_bounding_line_to_csv(x, y, bound_indices, filename='bounding_line.csv'):
+    """
+    Export the bounding line points to a CSV file.
+    
+    Parameters:
+    -----------
+    x, y : array-like
+        Original data points
+    bound_indices : ndarray
+        Indices of points forming the bounding line
+    filename : str
+        Output CSV filename
+    
+    Returns:
+    --------
+    str : Path to the saved CSV file
+    """
+    # Create DataFrame with bounding line points
+    df = pd.DataFrame({
+        'original_index': bound_indices,
+        'x': x[bound_indices],
+        'y': y[bound_indices],
+        'order_in_boundary': np.arange(len(bound_indices))
+    })
+    
+    # Save to CSV
+    output_path = f'/mnt/user-data/outputs/{filename}'
+    df.to_csv(output_path, index=False)
+    
+    print(f"Exported {len(bound_indices)} bounding line points to {filename}")
+    print(f"Columns: original_index, x, y, order_in_boundary")
+    
+    return output_path
+
+
+def verify_bounding_line(x, y, bound_indices):
+    """
+    Verify that the bounding line is valid:
+    1. All points are on or above the line
+    2. All points in the line are actual data points
+    
+    Parameters:
+    -----------
+    x, y : array-like
+        Original data points
+    bound_indices : ndarray
+        Indices of points forming the bounding line
+    
+    Returns:
+    --------
+    bool : True if valid, False otherwise
+    dict : Dictionary with verification details
+    """
+    bound_x = x[bound_indices]
+    bound_y = y[bound_indices]
+    
+    # Check 1: All bounding points are actual data points
+    all_actual_points = all(
+        any((x[i] == bx and y[i] == by) for i in range(len(x)))
+        for bx, by in zip(bound_x, bound_y)
+    )
+    
+    # Check 2: All data points are on or above the bounding line
+    # For each data point, check if it's above the line segments
+    all_above = True
+    violations = []
+    
+    for i in range(len(x)):
+        xi, yi = x[i], y[i]
+        
+        # Find the line segment that xi falls within
+        for j in range(len(bound_x) - 1):
+            x1, y1 = bound_x[j], bound_y[j]
+            x2, y2 = bound_x[j + 1], bound_y[j + 1]
+            
+            if x1 <= xi <= x2:
+                # Linear interpolation to find y value on the line at xi
+                if x2 - x1 == 0:  # Vertical line segment (shouldn't happen in lower hull)
+                    line_y = min(y1, y2)
+                else:
+                    t = (xi - x1) / (x2 - x1)
+                    line_y = y1 + t * (y2 - y1)
+                
+                if yi < line_y - 1e-10:  # Small tolerance for floating point
+                    all_above = False
+                    violations.append({
+                        'point_index': i,
+                        'x': xi,
+                        'y': yi,
+                        'line_y': line_y,
+                        'difference': yi - line_y
+                    })
+                break
+    
+    return all_above and all_actual_points, {
+        'all_actual_points': all_actual_points,
+        'all_above_line': all_above,
+        'num_violations': len(violations),
+        'violations': violations[:5] if violations else []  # Show first 5 violations
+    }
+
+
+# Example usage and comprehensive testing
+if __name__ == "__main__":
+    np.random.seed(42)
+    
+    print("=" * 70)
+    print("LOWER BOUNDING LINE - Using Only Actual Data Points")
+    print("=" * 70)
+    
+    # Test 1: Data with outliers above
+    print("\n--- Test 1: Sinusoidal with upward outliers ---")
+    x1 = np.linspace(0, 10, 100)
+    y1 = np.sin(x1) + np.random.exponential(0.5, 100)
+    
+    indices1, bound_x1, bound_y1 = lower_bounding_line(x1, y1)
+    valid1, details1 = verify_bounding_line(x1, y1, indices1)
+    
+    print(f"Original data points: {len(x1)}")
+    print(f"Bounding line points: {len(bound_x1)}")
+    print(f"Valid bounding line: {valid1}")
+    print(f"All points are actual data: {details1['all_actual_points']}")
+    print(f"All data above/on line: {details1['all_above_line']}")
+    
+    # Export to CSV
+    export_bounding_line_to_csv(x1, y1, indices1, 'bounding_line_test1.csv')
+    
+    # Test 2: Random scatter
+    print("\n--- Test 2: Random scatter ---")
+    x2 = np.random.uniform(0, 10, 500)
+    y2 = np.random.uniform(0, 5, 500)
+    
+    indices2, bound_x2, bound_y2 = lower_bounding_line(x2, y2)
+    valid2, details2 = verify_bounding_line(x2, y2, indices2)
+    
+    print(f"Original data points: {len(x2)}")
+    print(f"Bounding line points: {len(bound_x2)}")
+    print(f"Valid bounding line: {valid2}")
+    
+    # Export to CSV
+    export_bounding_line_to_csv(x2, y2, indices2, 'bounding_line_test2.csv')
+    
+    # Test 3: Parabolic lower bound
+    print("\n--- Test 3: Parabolic with upward noise ---")
+    x3 = np.linspace(-5, 5, 200)
+    y3 = x3**2 + np.random.exponential(1, 200)
+    
+    indices3, bound_x3, bound_y3 = lower_bounding_line(x3, y3)
+    valid3, details3 = verify_bounding_line(x3, y3, indices3)
+    
+    print(f"Original data points: {len(x3)}")
+    print(f"Bounding line points: {len(bound_x3)}")
+    print(f"Valid bounding line: {valid3}")
+    
+    # Export to CSV
+    export_bounding_line_to_csv(x3, y3, indices3, 'bounding_line_test3.csv')
+    
+    # Test 4: Duplicate x values
+    print("\n--- Test 4: Duplicate x values ---")
+    x4 = np.repeat(np.linspace(0, 10, 50), 5)
+    y4 = np.random.uniform(0, 10, 250)
+    
+    indices4, bound_x4, bound_y4 = lower_bounding_line(x4, y4)
+    valid4, details4 = verify_bounding_line(x4, y4, indices4)
+    
+    print(f"Original data points: {len(x4)}")
+    print(f"Bounding line points: {len(bound_x4)}")
+    print(f"Valid bounding line: {valid4}")
+    
+    # Export to CSV
+    export_bounding_line_to_csv(x4, y4, indices4, 'bounding_line_test4.csv')
+    
+    # Verify actual indices work
+    print("\n--- Verification: Bounding points are actual data points ---")
+    print(f"First bounding point index: {indices4[0]}")
+    print(f"  x[{indices4[0]}] = {x4[indices4[0]]}, matches bound_x[0] = {bound_x4[0]}: {x4[indices4[0]] == bound_x4[0]}")
+    print(f"  y[{indices4[0]}] = {y4[indices4[0]]}, matches bound_y[0] = {bound_y4[0]}: {y4[indices4[0]] == bound_y4[0]}")
+    
+    # Show preview of one CSV
+    print("\n--- CSV Preview (Test 2) ---")
+    df_preview = pd.read_csv('/mnt/user-data/outputs/bounding_line_test2.csv')
+    print(df_preview.head(10))
+    print(f"... ({len(df_preview)} total rows)")
+    
+    # Create visualizations
+    fig, axes = plt.subplots(2, 2, figsize=(15, 12))
+    test_data = [
+        (x1, y1, indices1, bound_x1, bound_y1, "Sinusoidal with outliers"),
+        (x2, y2, indices2, bound_x2, bound_y2, "Random scatter"),
+        (x3, y3, indices3, bound_x3, bound_y3, "Parabolic lower bound"),
+        (x4, y4, indices4, bound_x4, bound_y4, "Duplicate x values")
+    ]
+    
+    for ax, (x, y, indices, bound_x, bound_y, title) in zip(axes.flat, test_data):
+        # Plot all data points
+        ax.scatter(x, y, alpha=0.3, s=10, label='All data points', color='blue')
+        
+        # Highlight the bounding line points
+        ax.scatter(bound_x, bound_y, s=100, color='red', 
+                  zorder=5, label='Bounding line points', edgecolors='black', linewidths=1.5)
+        
+        # Draw the bounding line
+        ax.plot(bound_x, bound_y, 'r-', linewidth=2, alpha=0.7, zorder=4)
+        
+        ax.set_xlabel('X')
+        ax.set_ylabel('Y')
+        ax.set_title(f"{title}\n({len(bound_x)} points from {len(x)} total)")
+        ax.legend()
+        ax.grid(True, alpha=0.3)
+    
+    plt.tight_layout()
+    plt.savefig('/mnt/user-data/outputs/lower_bounding_line_actual_points.png', 
+                dpi=150, bbox_inches='tight')
+    plt.close()
+    
+    # Create a detailed view of one example
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(15, 5))
+    
+    # Left plot: Overview
+    ax1.scatter(x2, y2, alpha=0.2, s=5, label='All data points', color='lightblue')
+    ax1.scatter(bound_x2, bound_y2, s=80, color='red', 
+               zorder=5, label=f'Bounding points (n={len(bound_x2)})', 
+               edgecolors='black', linewidths=1)
+    ax1.plot(bound_x2, bound_y2, 'r-', linewidth=2, alpha=0.7, zorder=4)
+    ax1.set_xlabel('X')
+    ax1.set_ylabel('Y')
+    ax1.set_title(f'Lower Bounding Line: {len(x2)} points → {len(bound_x2)} boundary points')
+    ax1.legend()
+    ax1.grid(True, alpha=0.3)
+    
+    # Right plot: Zoomed section to show detail
+    zoom_start, zoom_end = 2, 4
+    mask = (x2 >= zoom_start) & (x2 <= zoom_end)
+    zoom_bound_mask = (bound_x2 >= zoom_start) & (bound_x2 <= zoom_end)
+    
+    ax2.scatter(x2[mask], y2[mask], alpha=0.4, s=30, label='Data points', color='lightblue')
+    ax2.scatter(bound_x2[zoom_bound_mask], bound_y2[zoom_bound_mask], 
+               s=150, color='red', zorder=5, label='Bounding points', 
+               edgecolors='black', linewidths=2)
+    ax2.plot(bound_x2, bound_y2, 'r-', linewidth=2, alpha=0.7, zorder=4)
+    
+    # Annotate the bounding points with their indices
+    for i, (bx, by) in enumerate(zip(bound_x2[zoom_bound_mask], bound_y2[zoom_bound_mask])):
+        original_idx = indices2[zoom_bound_mask][i]
+        ax2.annotate(f'idx={original_idx}', (bx, by), 
+                    xytext=(5, 5), textcoords='offset points',
+                    fontsize=8, bbox=dict(boxstyle='round,pad=0.3', 
+                    facecolor='yellow', alpha=0.7))
+    
+    ax2.set_xlabel('X')
+    ax2.set_ylabel('Y')
+    ax2.set_title(f'Zoomed View (x ∈ [{zoom_start}, {zoom_end}])')
+    ax2.legend()
+    ax2.grid(True, alpha=0.3)
+    
+    plt.tight_layout()
+    plt.savefig('/mnt/user-data/outputs/bounding_line_detail.png', 
+                dpi=150, bbox_inches='tight')
+    
+    print("\n" + "=" * 70)
+    print("✓ All CSVs and visualizations saved successfully!")
+    print("=" * 70)
+    print("\nEXPORTED CSV FILES:")
+    print("  • bounding_line_test1.csv")
+    print("  • bounding_line_test2.csv")
+    print("  • bounding_line_test3.csv")
+    print("  • bounding_line_test4.csv")
+    print("\nCSV FORMAT:")
+    print("  - original_index: Index in your original data array")
+    print("  - x: X coordinate of the bounding point")
+    print("  - y: Y coordinate of the bounding point")
+    print("  - order_in_boundary: Order along the bounding line (0 to n-1)")
