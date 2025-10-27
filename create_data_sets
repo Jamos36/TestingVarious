@@ -1,0 +1,77 @@
+import numpy as np
+import pandas as pd
+import os
+
+# Set random seed for reproducibility
+np.random.seed(42)
+
+# Create output directory
+output_dir = '/mnt/user-data/outputs'
+os.makedirs(output_dir, exist_ok=True)
+
+# Number of points
+n_points = 500
+x = np.linspace(0, 10, n_points)
+
+# Dataset 1: Flat lower bound with gradual increase
+def dataset1():
+    lower_bound = 2 + 0.1 * x
+    scatter_height = np.random.exponential(2, n_points)
+    y = lower_bound + scatter_height
+    return pd.DataFrame({'x': x, 'y': y})
+
+# Dataset 2: Sinusoidal oscillatory lower bound
+def dataset2():
+    lower_bound = 5 + 2 * np.sin(2 * x) + 0.3 * x
+    scatter_height = np.random.gamma(2, 1.5, n_points)
+    y = lower_bound + scatter_height
+    return pd.DataFrame({'x': x, 'y': y})
+
+# Dataset 3: Exponential growth lower bound
+def dataset3():
+    lower_bound = 1 + 0.5 * np.exp(0.3 * x)
+    scatter_height = np.random.lognormal(0, 0.8, n_points)
+    y = lower_bound + scatter_height
+    return pd.DataFrame({'x': x, 'y': y})
+
+# Dataset 4: Multiple local minima and maxima (polynomial-like)
+def dataset4():
+    lower_bound = 3 + 2*np.sin(x) + 0.5*np.cos(3*x) + 0.2*x**2 - 0.01*x**3
+    scatter_height = np.random.weibull(2, n_points) * 2
+    y = lower_bound + scatter_height
+    return pd.DataFrame({'x': x, 'y': y})
+
+# Dataset 5: Sharp valleys and peaks (high frequency oscillation)
+def dataset5():
+    lower_bound = 10 + 3*np.sin(4*x) + 1.5*np.cos(7*x) - 0.2*x
+    scatter_height = np.random.chisquare(3, n_points) * 0.5
+    y = lower_bound + scatter_height
+    return pd.DataFrame({'x': x, 'y': y})
+
+# Dataset 6: Logarithmic growth with oscillations
+def dataset6():
+    lower_bound = 2*np.log(x + 1) + np.sin(3*x) + 5
+    scatter_height = np.random.pareto(2, n_points)
+    y = lower_bound + scatter_height
+    return pd.DataFrame({'x': x, 'y': y})
+
+# Generate and save all datasets
+datasets = [
+    ("dataset1_flat_gradual.csv", dataset1, "Flat with gradual increase"),
+    ("dataset2_sinusoidal.csv", dataset2, "Sinusoidal oscillatory"),
+    ("dataset3_exponential.csv", dataset3, "Exponential growth"),
+    ("dataset4_polynomial.csv", dataset4, "Multiple local min/max"),
+    ("dataset5_high_frequency.csv", dataset5, "Sharp valleys and peaks"),
+    ("dataset6_logarithmic.csv", dataset6, "Logarithmic with oscillations")
+]
+
+for filename, func, description in datasets:
+    df = func()
+    filepath = os.path.join(output_dir, filename)
+    df.to_csv(filepath, index=False)
+    print(f"Created {filename}: {description}")
+    print(f"  - Points: {len(df)}")
+    print(f"  - Y range: [{df['y'].min():.2f}, {df['y'].max():.2f}]")
+    print()
+
+print("All datasets created successfully!")
