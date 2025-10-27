@@ -1,0 +1,181 @@
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+from scipy.interpolate import UnivariateSpline, interp1d
+from scipy.signal import savgol_filter
+import os
+
+def find_lower_envelope(self, df, x_col, y_col, num_bins=100, percentile=2):
+    """
+    Find the lower bounding curve that hugs the bottom of the data.
+    
+    This approach:
+    1. Divides x-axis into bins
+    2. Finds the minimum (or low percentile) y-value in each bin
+    3. Creates a curve from these points
+    
+    Parameters:
+    - self: Instance reference (for class methods)
+    - df: DataFrame with data
+    - x_col: String name of the x column
+    - y_col: String name of the y column
+    - num_bins: Number of bins to divide the x range into
+    - percentile: Which percentile to use (lower = tighter bound)
+    """
+    df_sorted = df.sort_values(x_col).reset_index(drop=True)
+    
+    x_min, x_max = df_sorted[x_col].min(), df_sorted[x_col].max()
+    bin_edges = np.linspace(x_min, x_max, num_bins + 1)
+    
+    lower_points_x = []
+    lower_points_y = []
+    lower_indices = []
+    
+    for i in range(num_bins):
+        # Get points in this bin
+        mask = (df_sorted[x_col] >= bin_edges[i]) & (df_sorted[x_col] < bin_edges[i + 1])
+        bin_data = df_sorted[mask]
+        
+        if len(bin_data) > 0:
+            # Find the point at the specified percentile
+            threshold = np.percentile(bin_data[y_col], percentile)
+            
+            # Get the actual point closest to this threshold (must be from dataset)
+            candidates = bin_data[bin_data[y_col] <= threshold * 1.1]  # Allow 10% margin
+            
+            if len(candidates) > 0:
+                # Pick the one with lowest y
+                min_idx = candidates[y_col].idxmin()
+                lower_points_x.append(df_sorted.loc[min_idx, x_col])
+                lower_points_y.append(df_sorted.loc[min_idx, y_col])
+                lower_indices.append(min_idx)
+    
+    # Handle the last bin edge
+    mask = df_sorted[x_col] >= bin_edges[-1]
+    if mask.any():
+        bin_data = df_sorted[mask]
+        threshold = np.percentile(bin_data[y_col], percentile)
+        candidates = bin_data[bin_data[y_col] <= threshold * 1.1]
+        if len(candidates) > 0:
+            min_idx = candidates[y_col].idxmin()
+            lower_points_x.append(df_sorted.loc[min_idx, x_col])
+            lower_points_y.append(df_sorted.loc[min_idx, y_col])
+            lower_indices.append(min_idx)
+    
+    # Create result dataframe from actual dataset points
+    result_df = df_sorted.loc[lower_indices].copy()
+    result_df = result_df.drop_duplicates().sort_values(x_col).reset_index(drop=True)
+    
+    return result_df
+
+
+def smooth_lower_curve(self, curve_df, x_col, y_col, remove_spikes=True):
+    """
+    Post-process the curve to remove upward spikes.
+    A spike is defined as a point that goes up then down again.
+    
+    Parameters:
+    - self: Instance reference (for class methods)
+    - curve_df: DataFrame with the lower bound points
+    - x_col: String name of the x column
+    - y_col: String name of the y column
+    - remove_spikes: Whether to remove upward spikes
+    """
+    if len(curve_df) <= 2:
+        return curve_df
+    
+    if not remove_spikes:
+        return curve_df
+    
+    smoothed = [curve_df.iloc[0]]
+    
+    for i in range(1, len(curve_df) - 1):
+        prev_point = smoothed[-1]
+        curr_point = curve_df.iloc[i]
+        next_point = curve_df.iloc[i + 1]
+        
+        # Calculate slopes
+        dx1 = curr_point[x_col] - prev_point[x_col]
+        dy1 = curr_point[y_col] - prev_point[y_col]
+        dx2 = next_point[x_col] - curr_point[x_col]
+        dy2 = next_point[y_col] - curr_point[y_col]
+        
+        if dx1 > 0 and dx2 > 0:
+            slope1 = dy1 / dx1
+            slope2 = dy2 / dx2
+            
+            # If we go up then down, it's a spike - skip it
+            # Allow some tolerance for numerical issues
+            if slope1 > 0.1 and slope2 < -0.1:
+                continue  # Skip this point
+        
+        smoothed.append(curr_point)
+    
+    # Always add last point
+    smoothed.append(curve_df.iloc[-1])
+    
+    return pd.DataFrame(smoothed).reset_index(drop=True)
+
+
+# Process all datasets
+output_dir = '/mnt/user-data/outputs'
+
+datasets = [
+    ("dataset1_flat_gradual.csv", 80, 3),      # num_bins, percentile
+    ("dataset2_sinusoidal.csv", 100, 2),
+    ("dataset3_exponential.csv", 80, 3),
+    ("dataset4_polynomial.csv", 100, 2),
+    ("dataset5_high_frequency.csv", 120, 2),
+    ("dataset6_logarithmic.csv", 100, 2),
+]
+
+print("Finding lower bounding curves that hug the data...\n")
+
+for dataset_file, num_bins, percentile in datasets:
+    print(f"Processing {dataset_file}...")
+    
+    # Load dataset
+    df = pd.read_csv(os.path.join(output_dir, dataset_file))
+    
+    # Find lower bounding curve (pass None for self since we're not using a class)
+    lower_curve = find_lower_envelope(None, df, 'x', 'y', num_bins=num_bins, percentile=percentile)
+    
+    # Smooth to remove spikes
+    lower_curve = smooth_lower_curve(None, lower_curve, 'x', 'y', remove_spikes=True)
+    
+    # Save to CSV
+    output_file = dataset_file.replace('.csv', '_lower_bound_v2.csv')
+    lower_curve.to_csv(os.path.join(output_dir, output_file), index=False)
+    
+    print(f"  - Original points: {len(df)}")
+    print(f"  - Bounding curve points: {len(lower_curve)}")
+    print(f"  - Saved to: {output_file}")
+    
+    # Create visualization
+    fig, ax = plt.subplots(figsize=(14, 8))
+    
+    # Plot all points
+    ax.scatter(df['x'], df['y'], alpha=0.5, s=12, c='steelblue', 
+               edgecolors='none', label='Data points', zorder=1)
+    
+    # Plot bounding curve
+    ax.plot(lower_curve['x'], lower_curve['y'], 'r-', linewidth=3, 
+            label='Lower bounding curve', zorder=5)
+    ax.scatter(lower_curve['x'], lower_curve['y'], c='red', s=60, 
+               zorder=6, edgecolors='darkred', linewidths=2)
+    
+    ax.set_xlabel('x', fontsize=13, fontweight='bold')
+    ax.set_ylabel('y', fontsize=13, fontweight='bold')
+    ax.set_title(f'Lower Bounding Curve (Hugging) - {dataset_file}', 
+                 fontsize=15, fontweight='bold')
+    ax.legend(fontsize=11, loc='upper left')
+    ax.grid(True, alpha=0.3, linewidth=0.8)
+    
+    plot_file = dataset_file.replace('.csv', '_with_bound_v2.png')
+    plt.savefig(os.path.join(output_dir, plot_file), dpi=150, bbox_inches='tight')
+    plt.close()
+    
+    print(f"  - Plot saved to: {plot_file}\n")
+
+print("All lower bounding curves computed and saved!")
+print("\nNote: All curve points are actual data points from the original datasets.")
