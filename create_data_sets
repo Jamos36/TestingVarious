@@ -1,77 +1,195 @@
-import numpy as np
-import pandas as pd
-import os
-
-# Set random seed for reproducibility
-np.random.seed(42)
-
-# Create output directory
-output_dir = '/mnt/user-data/outputs'
-os.makedirs(output_dir, exist_ok=True)
-
-# Number of points
-n_points = 500
-x = np.linspace(0, 10, n_points)
-
-# Dataset 1: Flat lower bound with gradual increase
-def dataset1():
-    lower_bound = 2 + 0.1 * x
-    scatter_height = np.random.exponential(2, n_points)
+import numpy as np 
+import pandas as pd 
+import os 
+ 
+# Set random seed for reproducibility 
+np.random.seed(42) 
+ 
+# Create output directory 
+output_dir = "C:\\Users\\User\\Desktop\\outputs"
+os.makedirs(output_dir, exist_ok=True) 
+ 
+# Number of popynts 
+n_points = 500 
+x = np.linspace(0, 10, n_points) 
+ 
+# Dataset 1: Flat lower bound with gradual increase 
+def dataset1(): 
+    lower_bound = 2 + 0.1 * x 
+    scatter_height = np.random.exponential(2, n_points) 
+    y = lower_bound + scatter_height 
+    return pd.DataFrame({'x': x, 'y': y}) 
+ 
+# Dataset 2: Sinusoidal oscillatory lower bound 
+def dataset2(): 
+    lower_bound = 5 + 2 * np.sin(2 * x) + 0.3 * x 
+    scatter_height = np.random.gamma(2, 1.5, n_points) 
+    y = lower_bound + scatter_height 
+    return pd.DataFrame({'x': x, 'y': y}) 
+ 
+# Dataset 3: Exponential growth lower bound 
+def dataset3(): 
+    lower_bound = 1 + 0.5 * np.exp(0.3 * x) 
+    scatter_height = np.random.lognormal(0, 0.8, n_points) 
+    y = lower_bound + scatter_height 
+    return pd.DataFrame({'x': x, 'y': y}) 
+ 
+# Dataset 4: Multiple local minima and maxima (polynomial-like) 
+def dataset4(): 
+    lower_bound = 3 + 2*np.sin(x) + 0.5*np.cos(3*x) + 0.2*x**2 - 0.01*x**3 
+    scatter_height = np.random.weibull(2, n_points) * 2 
+    y = lower_bound + scatter_height 
+    return pd.DataFrame({'x': x, 'y': y}) 
+ 
+# Dataset 5: Sharp valleys and peaks (high frequency oscillation) 
+def dataset5(): 
+    lower_bound = 10 + 3*np.sin(4*x) + 1.5*np.cos(7*x) - 0.2*x 
+    scatter_height = np.random.chisquare(3, n_points) * 0.5 
+    y = lower_bound + scatter_height 
+    return pd.DataFrame({'x': x, 'y': y}) 
+ 
+# Dataset 6: Logarithmic growth with oscillations 
+def dataset6(): 
+    lower_bound = 2*np.log(x + 1) + np.sin(3*x) + 5 
+    scatter_height = np.random.pareto(2, n_points) 
+    y = lower_bound + scatter_height 
+    return pd.DataFrame({'x': x, 'y': y}) 
+ 
+# Dataset 7: Curved funnel centered around a point (Bayesian optimization style)
+def dataset7():
+    # Parameters for the curved funnel
+    center_x = 5  # Center position
+    narrowness = 20  # Controls how narrow the funnel is
+    depth = 3  # Depth of the funnel
+    vertical_shift = 10  # Shift the whole funnel up
+    
+    # Bayesian optimization-style sampling
+    n_exploit = int(0.7 * n_points)  # 70% of points near center
+    x_exploit = np.random.normal(center_x, 0.5, n_exploit)
+    
+    n_explore = int(0.2 * n_points)  # 20% moderate exploration
+    x_explore = np.random.normal(center_x, 1.5, n_explore)
+    
+    n_random = n_points - n_exploit - n_explore  # 10% random
+    x_random = np.random.uniform(0, 10, n_random)
+    
+    # Combine and clip
+    x_dataset7 = np.concatenate([x_exploit, x_explore, x_random])
+    x_dataset7 = np.clip(x_dataset7, 0, 10)
+    np.random.shuffle(x_dataset7)
+    
+    # Create curved funnel shape
+    lower_bound = -depth / (1 + narrowness * (x_dataset7 - center_x)**2) + vertical_shift
+    
+    # Add scatter proportional to height from bottom
+    height_from_bottom = lower_bound - lower_bound.min()
+    scatter_scale = 0.1 + 0.3 * height_from_bottom / height_from_bottom.max()
+    scatter_height = np.random.exponential(1, n_points) * scatter_scale
+    
     y = lower_bound + scatter_height
-    return pd.DataFrame({'x': x, 'y': y})
+    return pd.DataFrame({'x': x_dataset7, 'y': y})
 
-# Dataset 2: Sinusoidal oscillatory lower bound
-def dataset2():
-    lower_bound = 5 + 2 * np.sin(2 * x) + 0.3 * x
-    scatter_height = np.random.gamma(2, 1.5, n_points)
-    y = lower_bound + scatter_height
-    return pd.DataFrame({'x': x, 'y': y})
-
-# Dataset 3: Exponential growth lower bound
-def dataset3():
-    lower_bound = 1 + 0.5 * np.exp(0.3 * x)
-    scatter_height = np.random.lognormal(0, 0.8, n_points)
-    y = lower_bound + scatter_height
-    return pd.DataFrame({'x': x, 'y': y})
-
-# Dataset 4: Multiple local minima and maxima (polynomial-like)
-def dataset4():
-    lower_bound = 3 + 2*np.sin(x) + 0.5*np.cos(3*x) + 0.2*x**2 - 0.01*x**3
-    scatter_height = np.random.weibull(2, n_points) * 2
-    y = lower_bound + scatter_height
-    return pd.DataFrame({'x': x, 'y': y})
-
-# Dataset 5: Sharp valleys and peaks (high frequency oscillation)
-def dataset5():
-    lower_bound = 10 + 3*np.sin(4*x) + 1.5*np.cos(7*x) - 0.2*x
-    scatter_height = np.random.chisquare(3, n_points) * 0.5
-    y = lower_bound + scatter_height
-    return pd.DataFrame({'x': x, 'y': y})
-
-# Dataset 6: Logarithmic growth with oscillations
-def dataset6():
-    lower_bound = 2*np.log(x + 1) + np.sin(3*x) + 5
-    scatter_height = np.random.pareto(2, n_points)
-    y = lower_bound + scatter_height
-    return pd.DataFrame({'x': x, 'y': y})
-
-# Generate and save all datasets
-datasets = [
-    ("dataset1_flat_gradual.csv", dataset1, "Flat with gradual increase"),
-    ("dataset2_sinusoidal.csv", dataset2, "Sinusoidal oscillatory"),
-    ("dataset3_exponential.csv", dataset3, "Exponential growth"),
-    ("dataset4_polynomial.csv", dataset4, "Multiple local min/max"),
-    ("dataset5_high_frequency.csv", dataset5, "Sharp valleys and peaks"),
-    ("dataset6_logarithmic.csv", dataset6, "Logarithmic with oscillations")
-]
-
-for filename, func, description in datasets:
-    df = func()
-    filepath = os.path.join(output_dir, filename)
-    df.to_csv(filepath, index=False)
-    print(f"Created {filename}: {description}")
-    print(f"  - Points: {len(df)}")
-    print(f"  - Y range: [{df['y'].min():.2f}, {df['y'].max():.2f}]")
-    print()
-
+# Dataset 8: Spike function with gradient density (Bayesian optimization style)
+def dataset8():
+    # Create gradient density distribution centered at x=4
+    density_center = 4
+    
+    # Component 1: Very dense at center (40% of points)
+    n_center = int(0.4 * n_points)
+    x_center = np.random.normal(density_center, 0.5, n_center)
+    
+    # Component 2: Medium density (30% of points)
+    n_medium = int(0.3 * n_points)
+    x_medium = np.random.normal(density_center, 1.5, n_medium)
+    
+    # Component 3: Wider spread (20% of points)
+    n_wide = int(0.2 * n_points)
+    x_wide = np.random.normal(density_center, 3.0, n_wide)
+    
+    # Component 4: Background uniform (10% of points)
+    n_uniform = n_points - n_center - n_medium - n_wide
+    x_uniform = np.random.uniform(0, 10, n_uniform)
+    
+    # Combine all x values
+    x_dataset8 = np.concatenate([x_center, x_medium, x_wide, x_uniform])
+    x_dataset8 = np.clip(x_dataset8, 0, 10)
+    np.random.shuffle(x_dataset8)
+    
+    # Define the complex baseline function
+    y_baseline = np.zeros_like(x_dataset8)
+    
+    for i, xi in enumerate(x_dataset8):
+        if xi < 3.5:
+            # Gradual increase
+            y_baseline[i] = 2 + 0.3 * xi
+        elif 3.5 <= xi < 4.5:
+            # Smooth transition up
+            t = (xi - 3.5)
+            base_val = 2 + 0.3 * 3.5
+            spike_height = 6
+            y_baseline[i] = base_val + spike_height * (1 / (1 + np.exp(-10*(t-0.5))))
+        elif 4.5 <= xi < 5.5:
+            # Spike region - inverted Gaussian for local minimum at x=5
+            spike_center = 5
+            spike_width = 0.3
+            spike_depth = 2
+            base_height = 8.5
+            y_baseline[i] = base_height - spike_depth * np.exp(-0.5 * ((xi - spike_center) / spike_width)**2)
+        elif 5.5 <= xi < 6.5:
+            # Come back down smoothly
+            t = (xi - 5.5)
+            start_val = 8.5
+            end_val = 4
+            y_baseline[i] = start_val - (start_val - end_val) * (1 / (1 + np.exp(-10*(t-0.5))))
+        else:
+            # Rapid exponential rise
+            y_baseline[i] = 4 * np.exp(0.5 * (xi - 6.5))
+    
+    # Add scatter - mostly small, some points exactly on line
+    scatter_array = []
+    
+    for i in range(len(x_dataset8)):
+        rand = np.random.random()
+        
+        if rand < 0.15:  # 15% of points exactly on the line
+            scatter = 0
+        elif rand < 0.6:  # 45% very close to line
+            scatter = np.random.exponential(0.1)
+        elif rand < 0.85:  # 25% moderate scatter
+            scatter = np.random.exponential(0.3)
+        else:  # 15% larger scatter
+            scatter = np.random.exponential(1.0)
+        
+        # Slightly increase scatter with distance from center
+        dist_from_center = np.abs(x_dataset8[i] - density_center)
+        scatter *= (1 + 0.1 * dist_from_center / 5)
+        
+        scatter_array.append(scatter)
+    
+    scatter_array = np.array(scatter_array)
+    y = y_baseline + scatter_array
+    
+    return pd.DataFrame({'x': x_dataset8, 'y': y})
+ 
+# Generate and save all datasets 
+datasets = [ 
+    ("dataset1_flat_gradual.csv", dataset1, "Flat with gradual increase"), 
+    ("dataset2_sinusoidal.csv", dataset2, "Sinusoidal oscillatory"), 
+    ("dataset3_exponential.csv", dataset3, "Exponential growth"), 
+    ("dataset4_polynomial.csv", dataset4, "Multiple local min/max"), 
+    ("dataset5_high_frequency.csv", dataset5, "Sharp valleys and peaks"), 
+    ("dataset6_logarithmic.csv", dataset6, "Logarithmic with oscillations"),
+    ("dataset7_curved_funnel.csv", dataset7, "Curved funnel (Bayesian optimization)"),
+    ("dataset8_spike_gradient.csv", dataset8, "Spike with gradient density") 
+] 
+ 
+for filename, func, description in datasets: 
+    df = func() 
+    filepath = os.path.join(output_dir, filename) 
+    df.to_csv(filepath, index=False) 
+    print(f"Created {filename}: {description}") 
+    print(f"  - Points: {len(df)}") 
+    print(f"  - Y range: [{df['y'].min():.2f}, {df['y'].max():.2f}]") 
+    print() 
+ 
 print("All datasets created successfully!")
