@@ -22,7 +22,7 @@ import matplotlib.pyplot as plt
 # ----------------------------------------------------------------------
 # 1. CONFIGURATION
 # ----------------------------------------------------------------------
-BASE_DIR = r"C:\Users\User\Desktop\snapfood-app\outputs"
+BASE_DIR = r"C:\Users\User\Desktop\outputs"
 OUTPUT_DIR = BASE_DIR + r"\min_curves"  # Save CSVs and PDFs in same folder
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
