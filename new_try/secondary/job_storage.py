@@ -1,8 +1,7 @@
-"""Optional checkpoint storage. Only disk mode writes files."""
+"""Optional checkpoints using pathlib for filesystem operations."""
 import json
-import os
 from pathlib import Path
-import tempfile
+from uuid import uuid4
 
 
 class MemoryStorage:
@@ -25,29 +24,38 @@ class DiskStorage:
         self.directory.mkdir(parents=True, exist_ok=True)
 
     def load(self, key):
-        path = self.directory / f'{key}.json'
-        return path.read_text(encoding='utf-8') if path.exists() else None
+        path = self.directory / f"{key}.json"
+        try:
+            return path.read_text(encoding="utf-8")
+        except FileNotFoundError:
+            return None
 
     def save(self, key, value):
-        # Publish a complete file or leave the previous version intact.
-        fd, name = tempfile.mkstemp(dir=self.directory, prefix='.pending-')
+        destination = self.directory / f"{key}.json"
+        temporary = self.directory / f".pending-{uuid4().hex}"
+
         try:
-            with os.fdopen(fd, 'w', encoding='utf-8') as output:
+            # Exclusive creation avoids overwriting another temporary file.
+            with temporary.open("x", encoding="utf-8") as output:
                 output.write(value)
-                output.flush()
-                os.fsync(output.fileno())
-            os.replace(name, self.directory / f'{key}.json')
+
+            # Same-directory replacement publishes the completed file.
+            temporary.replace(destination)
         finally:
-            if os.path.exists(name):
-                os.unlink(name)
+            temporary.unlink(missing_ok=True)
 
     def status(self, value):
-        self.save('status', json.dumps(value, ensure_ascii=False))
+        self.save(
+            "status",
+            json.dumps(value, ensure_ascii=False),
+        )
 
 
 def open_storage(mode, root, job_id):
-    if mode == 'memory':
+    if mode == "memory":
         return MemoryStorage()
-    if mode == 'disk':
+
+    if mode == "disk":
         return DiskStorage(Path(root) / job_id)
-    raise ValueError('TRANSCRIPT_STORAGE must be memory or disk')
+
+    raise ValueError("Storage mode must be memory or disk")
