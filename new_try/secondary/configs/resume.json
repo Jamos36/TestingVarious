@@ -1,0 +1,12 @@
+{
+  "adapter": "model_adapter:base_model",
+  "source_mode": "model",
+  "chunking": true,
+  "storage": "disk",
+  "checkpoint_dir": "./checkpoints",
+  "retry_attempts": 3,
+  "progress": true,
+  "render_markdown": true,
+  "output": "stdout",
+  "job_revision": "1"
+}

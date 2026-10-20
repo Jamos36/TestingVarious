@@ -1,0 +1,13 @@
+{
+  "adapter": "model_adapter:base_model",
+  "source_mode": "model",
+  "scope": "U.S. Code Title 18",
+  "chunking": true,
+  "max_request_bytes": 60000,
+  "overlap_turns": 2,
+  "storage": "none",
+  "retry_attempts": 3,
+  "progress": true,
+  "render_markdown": true,
+  "output": "stdout"
+}

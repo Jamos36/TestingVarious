@@ -1,0 +1,307 @@
+{
+  "$defs": {
+    "Concern": {
+      "additionalProperties": false,
+      "properties": {
+        "description": {
+          "title": "Description",
+          "type": "string"
+        },
+        "source_id": {
+          "title": "Source Id",
+          "type": "string"
+        },
+        "legal_quote": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Legal Quote"
+        },
+        "evidence": {
+          "items": {
+            "$ref": "#/$defs/Evidence"
+          },
+          "minItems": 1,
+          "title": "Evidence",
+          "type": "array"
+        },
+        "element_analysis": {
+          "title": "Element Analysis",
+          "type": "string"
+        },
+        "missing_facts": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Missing Facts",
+          "type": "array"
+        },
+        "counterevidence": {
+          "items": {
+            "$ref": "#/$defs/Evidence"
+          },
+          "title": "Counterevidence",
+          "type": "array"
+        }
+      },
+      "required": [
+        "description",
+        "source_id",
+        "legal_quote",
+        "evidence",
+        "element_analysis",
+        "missing_facts",
+        "counterevidence"
+      ],
+      "title": "Concern",
+      "type": "object"
+    },
+    "Evidence": {
+      "additionalProperties": false,
+      "properties": {
+        "speaker": {
+          "title": "Speaker",
+          "type": "string"
+        },
+        "timestamp": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Timestamp"
+        },
+        "quote": {
+          "minLength": 1,
+          "title": "Quote",
+          "type": "string"
+        }
+      },
+      "required": [
+        "speaker",
+        "timestamp",
+        "quote"
+      ],
+      "title": "Evidence",
+      "type": "object"
+    },
+    "ModelSource": {
+      "additionalProperties": false,
+      "properties": {
+        "source_id": {
+          "title": "Source Id",
+          "type": "string"
+        },
+        "citation": {
+          "title": "Citation",
+          "type": "string"
+        },
+        "origin": {
+          "enum": [
+            "model_rag",
+            "model_memory"
+          ],
+          "title": "Origin",
+          "type": "string"
+        },
+        "source_url": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Source Url"
+        },
+        "version": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Version"
+        },
+        "text": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Text"
+        }
+      },
+      "required": [
+        "source_id",
+        "citation",
+        "origin",
+        "source_url",
+        "version",
+        "text"
+      ],
+      "title": "ModelSource",
+      "type": "object"
+    },
+    "Participant": {
+      "additionalProperties": false,
+      "properties": {
+        "speaker": {
+          "title": "Speaker",
+          "type": "string"
+        },
+        "role": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Role"
+        }
+      },
+      "required": [
+        "speaker",
+        "role"
+      ],
+      "title": "Participant",
+      "type": "object"
+    },
+    "Point": {
+      "additionalProperties": false,
+      "properties": {
+        "summary": {
+          "title": "Summary",
+          "type": "string"
+        },
+        "evidence": {
+          "items": {
+            "$ref": "#/$defs/Evidence"
+          },
+          "minItems": 1,
+          "title": "Evidence",
+          "type": "array"
+        }
+      },
+      "required": [
+        "summary",
+        "evidence"
+      ],
+      "title": "Point",
+      "type": "object"
+    },
+    "Review": {
+      "additionalProperties": false,
+      "properties": {
+        "status": {
+          "enum": [
+            "potential_concern",
+            "none_identified",
+            "insufficient_information"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "explanation": {
+          "title": "Explanation",
+          "type": "string"
+        },
+        "concerns": {
+          "items": {
+            "$ref": "#/$defs/Concern"
+          },
+          "title": "Concerns",
+          "type": "array"
+        },
+        "limitations": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Limitations",
+          "type": "array"
+        }
+      },
+      "required": [
+        "status",
+        "explanation",
+        "concerns",
+        "limitations"
+      ],
+      "title": "Review",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "participants": {
+      "items": {
+        "$ref": "#/$defs/Participant"
+      },
+      "title": "Participants",
+      "type": "array"
+    },
+    "summary": {
+      "minLength": 1,
+      "title": "Summary",
+      "type": "string"
+    },
+    "high_points": {
+      "items": {
+        "$ref": "#/$defs/Point"
+      },
+      "title": "High Points",
+      "type": "array"
+    },
+    "timeline": {
+      "items": {
+        "$ref": "#/$defs/Point"
+      },
+      "title": "Timeline",
+      "type": "array"
+    },
+    "unresolved_questions": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Unresolved Questions",
+      "type": "array"
+    },
+    "legal_review": {
+      "$ref": "#/$defs/Review"
+    },
+    "model_sources": {
+      "items": {
+        "$ref": "#/$defs/ModelSource"
+      },
+      "title": "Model Sources",
+      "type": "array"
+    }
+  },
+  "required": [
+    "participants",
+    "summary",
+    "high_points",
+    "timeline",
+    "unresolved_questions",
+    "legal_review",
+    "model_sources"
+  ],
+  "title": "Analysis",
+  "type": "object"
+}

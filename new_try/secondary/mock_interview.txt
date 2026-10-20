@@ -1,0 +1,6 @@
+[00:00:00] Interviewer: What happened during the inventory review?
+[00:00:08] Witness A: I counted the boxes on Tuesday. Two were missing from the shelf.
+[00:00:17] Witness B: I moved two boxes to the overflow room. I emailed the team.
+[00:00:25] Witness A: I did not see that email. I cannot say anything was stolen.
+[00:00:34] Interviewer: What remains to be checked?
+[00:00:39] Witness B: We should reconcile the overflow log with the inventory list.

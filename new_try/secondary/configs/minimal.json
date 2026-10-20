@@ -1,0 +1,10 @@
+{
+  "adapter": "model_adapter:base_model",
+  "source_mode": "model",
+  "chunking": false,
+  "storage": "none",
+  "retry_attempts": 1,
+  "progress": false,
+  "render_markdown": false,
+  "output": "stdout"
+}

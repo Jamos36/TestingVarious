@@ -1,0 +1,79 @@
+{
+  "schema_version": "1.1",
+  "prompt_version": "1.3",
+  "job_id": "01e6f3a7a2ad50b91178c9f7ca33770d2452aed1dcec8aac5e979fb731590e08",
+  "input_file": "mock_interview.txt",
+  "legal_scope": "U.S. Code Title 18",
+  "source_mode": "model",
+  "coverage_complete": false,
+  "legal_sources": [],
+  "analysis": {
+    "participants": [
+      {
+        "speaker": "Interviewer",
+        "role": "Interviewer"
+      },
+      {
+        "speaker": "Witness A",
+        "role": null
+      },
+      {
+        "speaker": "Witness B",
+        "role": null
+      }
+    ],
+    "summary": "Witness A reported two boxes missing from a shelf. Witness B said they moved two boxes to an overflow room and emailed the team. Witness A had not seen the email and did not allege theft. The overflow log and inventory list remain to be reconciled.",
+    "high_points": [
+      {
+        "summary": "Witness A explicitly qualified the initial report.",
+        "evidence": [
+          {
+            "speaker": "Witness A",
+            "timestamp": "00:00:25",
+            "quote": "I cannot say anything was stolen."
+          }
+        ]
+      }
+    ],
+    "timeline": [
+      {
+        "summary": "Witness A counted boxes on Tuesday and noticed two missing from the shelf.",
+        "evidence": [
+          {
+            "speaker": "Witness A",
+            "timestamp": "00:00:08",
+            "quote": "I counted the boxes on Tuesday. Two were missing from the shelf."
+          }
+        ]
+      },
+      {
+        "summary": "Witness B explained the move and proposed reconciliation.",
+        "evidence": [
+          {
+            "speaker": "Witness B",
+            "timestamp": "00:00:17",
+            "quote": "I moved two boxes to the overflow room. I emailed the team."
+          },
+          {
+            "speaker": "Witness B",
+            "timestamp": "00:00:39",
+            "quote": "We should reconcile the overflow log with the inventory list."
+          }
+        ]
+      }
+    ],
+    "unresolved_questions": [
+      "Do the overflow log and inventory list reconcile?"
+    ],
+    "legal_review": {
+      "status": "insufficient_information",
+      "explanation": "No Title 18 source excerpts were provided, so a legal screening conclusion cannot be reached.",
+      "concerns": [],
+      "limitations": [
+        "Legal library retrieval is not connected.",
+        "Model-provided legal references and retrieval coverage are not independently verified by this pipeline."
+      ]
+    },
+    "model_sources": []
+  }
+}
